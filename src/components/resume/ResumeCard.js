@@ -1,97 +1,153 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
-import { formatGraduationYear, truncateString } from "@/lib/utils";
+import { formatGraduationYear } from "@/lib/utils";
 import dynamic from "next/dynamic";
+import { useAuth } from "@/lib/AuthContext";
+import { resumeAPI } from "@/lib/api";
 
 // Dynamically import PdfViewer to avoid SSR issues
 const PdfViewer = dynamic(() => import("./PdfViewer"), {
   ssr: false,
   loading: () => (
     <div className="flex justify-center items-center h-40">
-      <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-indigo-500"></div>
+      <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-[#0071e3]"></div>
     </div>
   ),
 });
 
-export default function ResumeCard({ resume }) {
-  const [isExpanded, setIsExpanded] = useState(false);
+export default function ResumeCard({ resume, onDelete }) {
   const [showPdf, setShowPdf] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const { user } = useAuth();
+  
+  const isAdmin = user?.role === 'admin';
 
   if (!resume) return null;
 
-  const { id, name, major, graduationYear, companies, keywords, pdfUrl } = resume;
-
-  const toggleExpand = () => {
-    setIsExpanded(!isExpanded);
-  };
+  const { id, name, major, graduationYear, pdfUrl, signedPdfUrl } = resume;
 
   const togglePdfView = () => {
     setShowPdf(!showPdf);
   };
+  
+  const handleDeleteClick = () => {
+    setShowConfirmDialog(true);
+  };
+  
+  const handleCancelDelete = () => {
+    setShowConfirmDialog(false);
+  };
+  
+  const handleConfirmDelete = async () => {
+    try {
+      setIsDeleting(true);
+      await resumeAPI.delete(id);
+      setShowConfirmDialog(false);
+      // Notify parent that this resume was deleted
+      if (onDelete) {
+        onDelete(id);
+      }
+    } catch (error) {
+      console.error('Error deleting resume:', error);
+      alert('Failed to delete resume. Please try again.');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   return (
-    <div className="bg-white shadow overflow-hidden sm:rounded-lg mb-4">
-      <div className="px-4 py-4 sm:px-6">
+    <div className="bg-white rounded-2xl shadow-sm overflow-hidden hover:shadow-md transition-shadow flex flex-col">
+      <div className="px-6 py-5 flex-grow">
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-medium text-indigo-600 truncate">{name}</h3>
-          <div className="ml-2 flex-shrink-0 flex">
-            <button
-              onClick={togglePdfView}
-              className="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-indigo-100 text-indigo-800 hover:bg-indigo-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-            >
-              {showPdf ? "Hide PDF" : "View PDF"}
-            </button>
-          </div>
-        </div>
-        
-        <div className="mt-2 sm:flex sm:justify-between">
-          <div className="sm:flex">
-            <p className="flex items-center text-sm text-gray-500">
-              <svg className="flex-shrink-0 mr-1.5 h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-              </svg>
-              {major}
-            </p>
-            <p className="mt-2 flex items-center text-sm text-gray-500 sm:mt-0 sm:ml-6">
-              <svg className="flex-shrink-0 mr-1.5 h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-              {formatGraduationYear(graduationYear)}
-            </p>
-          </div>
-        </div>
-        
-        <div className="mt-2">
-          <p className="text-sm text-gray-500">
-            <span className="font-medium text-gray-700">Companies:</span> {companies.join(", ")}
-          </p>
-          
-          <div className="mt-2">
-            <p className="text-sm text-gray-500">
-              <span className="font-medium text-gray-700">Keywords:</span>{" "}
-              {isExpanded 
-                ? keywords.join(", ")
-                : truncateString(keywords.join(", "), 80)}
-            </p>
-            
-            {keywords.length > 0 && keywords.join(", ").length > 80 && (
+          <h3 className="text-lg font-medium text-[#1d1d1f] truncate">{name}</h3>
+          <div className="ml-2 flex-shrink-0 flex space-x-2">
+            {isAdmin && (
               <button
-                onClick={toggleExpand}
-                className="mt-1 text-xs text-indigo-600 hover:text-indigo-800 font-medium focus:outline-none"
+                onClick={handleDeleteClick}
+                className="text-xs text-[#ff3b30] hover:text-red-700 transition-colors"
+                disabled={isDeleting}
+                aria-label="Delete resume"
               >
-                {isExpanded ? "Show less" : "Show more"}
+                {isDeleting ? '...' : 'Delete'}
               </button>
             )}
           </div>
         </div>
+        
+        <div className="mt-2 flex flex-wrap gap-2">
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs bg-blue-50 text-[#0071e3]">
+            {major}
+          </span>
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs bg-gray-100 text-[#6e6e73]">
+            {formatGraduationYear(graduationYear)}
+          </span>
+        </div>
       </div>
       
-      {/* PDF Viewer */}
+      <div className="mt-auto border-t border-[#e8e8ed]">
+        <button
+          onClick={togglePdfView}
+          className="w-full py-3 font-medium text-[#0071e3] hover:bg-[#f0f0f5] transition-colors focus:outline-none"
+        >
+          {showPdf ? "Hide Resume" : "View Resume"}
+        </button>
+      </div>
+      
+      {/* PDF Viewer Modal */}
       {showPdf && (
-        <div className="px-4 py-4 sm:px-6 border-t border-gray-200">
-          <PdfViewer pdfUrl={pdfUrl} />
+        <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl overflow-hidden w-full max-w-5xl mx-4 max-h-[90vh] flex flex-col">
+            <div className="p-4 border-b border-[#e8e8ed] flex justify-between items-center">
+              <h3 className="text-lg font-medium text-[#1d1d1f]">{name}'s Resume</h3>
+              <button 
+                onClick={togglePdfView}
+                className="text-[#6e6e73] hover:text-[#1d1d1f] transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="flex-1 overflow-auto">
+              {signedPdfUrl ? (
+                <PdfViewer pdfUrl={signedPdfUrl} />
+              ) : (
+                <div className="px-6 py-4 text-[#ff3b30] text-sm text-center">
+                  Could not load PDF preview.
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Confirmation Dialog */}
+      {showConfirmDialog && (
+        <div className="fixed inset-0 bg-black bg-opacity-30 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl p-6 max-w-md mx-4 shadow-xl">
+            <h3 className="text-lg font-medium text-[#1d1d1f] mb-2">Confirm Deletion</h3>
+            <p className="text-sm text-[#6e6e73] mb-6">
+              Are you sure you want to delete this resume? This action cannot be undone.
+            </p>
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={handleCancelDelete}
+                className="px-4 py-2 text-sm text-[#0071e3] bg-white border border-[#d2d2d7] rounded-full hover:bg-gray-50 transition-colors"
+                disabled={isDeleting}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmDelete}
+                className="px-4 py-2 text-sm text-white bg-[#ff3b30] rounded-full hover:bg-red-600 transition-colors"
+                disabled={isDeleting}
+              >
+                {isDeleting ? 'Deleting...' : 'Delete'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

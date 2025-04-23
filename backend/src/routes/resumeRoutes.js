@@ -5,6 +5,7 @@ const {
   getResumeById, 
   updateResume, 
   deleteResume,
+  deleteAllResumes,
   getFilters
 } = require('../controllers/resumeController');
 const { authenticate, isAdmin } = require('../middleware/auth');
@@ -21,5 +22,6 @@ router.get('/:id', getResumeById);
 router.post('/', authenticate, upload.single('file'), uploadResume);
 router.put('/:id', authenticate, updateResume);
 router.delete('/:id', authenticate, deleteResume);
+router.delete('/all/delete', authenticate, isAdmin, deleteAllResumes);
 
 module.exports = router; 

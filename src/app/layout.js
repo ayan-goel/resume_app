@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata = {
-  title: "Resume Database | Business Fraternity",
-  description: "A searchable database of member resumes for our business fraternity",
+  title: "Resume Database | Alpha Kappa Psi - Georgia Tech",
+  description: "A searchable database of member resumes for Alpha Kappa Psi at Georgia Tech",
 };
 
 export default function RootLayout({ children }) {

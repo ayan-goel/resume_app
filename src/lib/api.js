@@ -59,19 +59,25 @@ export const authAPI = {
 
 // Resume-related API calls
 export const resumeAPI = {
-  getAll: (filters = {}) => 
-    api.get('/resumes', { params: filters }),
-  
-  getById: (id) => 
-    api.get(`/resumes/${id}`),
-  
+  upload: (formData) => api.post('/resumes', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  }),
+  getAll: (params) => api.get('/resumes/search', { params }),
+  getFilters: () => api.get('/resumes/filters'),
+  getById: (id) => api.get(`/resumes/${id}`),
   create: (resumeData, file) => {
     const formData = new FormData();
     
-    // Add resume metadata
-    Object.keys(resumeData).forEach(key => {
-      formData.append(key, resumeData[key]);
-    });
+    // Add resume metadata if provided
+    if (resumeData) {
+      Object.keys(resumeData).forEach(key => {
+        if (resumeData[key]) {
+          formData.append(key, resumeData[key]);
+        }
+      });
+    }
     
     // Add the PDF file
     formData.append('file', file);
@@ -82,12 +88,12 @@ export const resumeAPI = {
       },
     });
   },
-  
   update: (id, resumeData) => 
     api.put(`/resumes/${id}`, resumeData),
-  
   delete: (id) => 
     api.delete(`/resumes/${id}`),
+  deleteAll: () =>
+    api.delete('/resumes/all/delete'),
 };
 
 // Companies-related API calls

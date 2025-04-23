@@ -38,8 +38,8 @@ A web application for managing and searching through a collection of member resu
 
 3. Run the development server
    ```
-   npm run dev
-   ```
+npm run dev
+```
 
 4. Open [http://localhost:3000](http://localhost:3000) in your browser
 

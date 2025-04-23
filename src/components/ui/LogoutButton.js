@@ -17,7 +17,8 @@ export default function LogoutButton() {
   return (
     <button
       onClick={handleLogout}
-      className="rounded-md bg-red-600 px-3 py-1 text-sm text-white hover:bg-red-700"
+      className="text-sm text-[#0071e3] hover:text-[#0077ed] transition-colors"
+      aria-label="Log out of your account"
     >
       Logout
     </button>
