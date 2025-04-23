@@ -70,37 +70,49 @@ export default function SearchPage() {
     fetchFilters();
   }, []);
 
-  // Fetch resumes based on filters
-  const fetchResumes = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      // Build query parameters
-      const params = {
-        query: generalSearch || undefined, // Add general search parameter
-        name: nameSearch || undefined,
-        major: filters.major.length > 0 ? filters.major.join(',') : undefined,
-        company: filters.company.length > 0 ? filters.company.join(',') : undefined,
-        graduationYear: filters.graduationYear.length > 0 ? filters.graduationYear.join(',') : undefined,
-        keyword: filters.keyword.length > 0 ? filters.keyword.join(',') : undefined,
-      };
-      
-      // Remove undefined params
-      Object.keys(params).forEach(key => params[key] === undefined && delete params[key]);
-
-      const { data } = await resumeAPI.getAll(params);
-      setFilteredResumes(data.data || []);
-    } catch (err) {
-      console.error("Failed to fetch resumes:", err);
-      setError("Failed to load resumes. Please try again later.");
-      setFilteredResumes([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [filters, nameSearch, generalSearch]); // Add generalSearch to dependency array
-
   // Debounced version of fetchResumes
-  const debouncedFetchResumes = useCallback(debounce(fetchResumes, 300), [fetchResumes]);
+  const debouncedFetchResumes = useCallback(() => {
+    const handler = debounce(() => {
+      setLoading(true);
+      setError(null);
+      try {
+        // Build query parameters
+        const params = {
+          query: generalSearch || undefined, // Add general search parameter
+          name: nameSearch || undefined,
+          major: filters.major.length > 0 ? filters.major.join(',') : undefined,
+          company: filters.company.length > 0 ? filters.company.join(',') : undefined,
+          graduationYear: filters.graduationYear.length > 0 ? filters.graduationYear.join(',') : undefined,
+          keyword: filters.keyword.length > 0 ? filters.keyword.join(',') : undefined,
+        };
+        
+        // Remove undefined params
+        Object.keys(params).forEach(key => params[key] === undefined && delete params[key]);
+
+        resumeAPI.getAll(params)
+          .then(({ data }) => {
+            setFilteredResumes(data.data || []);
+          })
+          .catch(err => {
+            console.error("Failed to fetch resumes:", err);
+            setError("Failed to load resumes. Please try again later.");
+            setFilteredResumes([]);
+          })
+          .finally(() => {
+            setLoading(false);
+          });
+      } catch (err) {
+        console.error("Failed to fetch resumes:", err);
+        setError("Failed to load resumes. Please try again later.");
+        setFilteredResumes([]);
+        setLoading(false);
+      }
+    }, 300);
+    
+    handler();
+    
+    return handler;
+  }, [filters, nameSearch, generalSearch]);
 
   // Fetch resumes whenever filters change
   useEffect(() => {

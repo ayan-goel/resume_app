@@ -385,7 +385,7 @@ export default function UploadPage() {
                     disabled={isSubmitting || files.length === 0}
                     className="flex w-full justify-center rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50"
                   >
-                    {isSubmitting ? "Uploading & Processing..." : `Upload ${files.length} Resume${files.length !== 1 ? 's' : ''}`}
+                    {isSubmitting ? "Uploading & Processing..." : `Upload ${files.length} Resume${files.length !== 1 ? "s" : ""}`}
                   </button>
                 </div>
               </div>

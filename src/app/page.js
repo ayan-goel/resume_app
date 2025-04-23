@@ -22,7 +22,7 @@ export default function Home() {
             Alpha Kappa Psi
           </h1>
           <p className="text-xl md:text-2xl font-medium tracking-tight text-[#1d1d1f] mb-2">
-            Georgia Tech's Premier Professional Business Fraternity
+            Georgia Tech&apos;s Premier Professional Business Fraternity
           </p>
           <p className="text-lg text-[#6e6e73] max-w-2xl mx-auto mb-10">
             Building principled business leaders through professional development, brotherhood, and service since 1904.
