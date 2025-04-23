@@ -92,10 +92,10 @@ export default function UploadPage() {
         setUploadProgress(prev => ({ ...prev, success: prev.success + 1 }));
       } catch (err) {
         // Get error details 
-        let errorMessage = `${file.name}: ${err.message || 'Unknown error'}`;
-        let errorDetails = '';
+        let errorMessage = `${file.name}: ${err.message || "Unknown error"}`;
+        let errorDetails = "";
         
-        // If there's a server response with more details
+        // If there&apos;s a server response with more details
         if (err.response) {
           if (err.response.data && err.response.data.message) {
             errorMessage = `${file.name}: ${err.response.data.message}`;
@@ -105,7 +105,7 @@ export default function UploadPage() {
           errorDetails = `Status: ${err.response.status} ${err.response.statusText}`;
           
           // Debug log for diagnosing issues
-          console.error('Full error response:', {
+          console.error("Full error response:", {
             file: file.name,
             status: err.response.status,
             statusText: err.response.statusText,
@@ -155,7 +155,7 @@ export default function UploadPage() {
       // Create a batch of files
       const currentBatch = files.slice(batchStart, batchStart + BATCH_SIZE);
       
-      // If this isn't the first batch, wait between batches
+      // If this isn&apos;t the first batch, wait between batches
       if (batchStart > 0) {
         setParsingStatus(`Brief pause before processing next batch...`);
         await new Promise(resolve => setTimeout(resolve, BATCH_DELAY));
@@ -182,13 +182,13 @@ export default function UploadPage() {
         const formatErrorMessages = () => {
           if (allErrorMessages.length <= 5) {
             return allErrorMessages.map(err => 
-              `${err.message}${err.details ? `\n   (${err.details})` : ''}`
-            ).join('\n\n');
+              `${err.message}${err.details ? `\n   (${err.details})` : ""}`
+            ).join("\n\n");
           } else {
             // If more than 5 errors, show first 5 and count the rest
             const firstFive = allErrorMessages.slice(0, 5).map(err => 
-              `${err.message}${err.details ? `\n   (${err.details})` : ''}`
-            ).join('\n\n');
+              `${err.message}${err.details ? `\n   (${err.details})` : ""}`
+            ).join("\n\n");
             return `${firstFive}\n\n...and ${allErrorMessages.length - 5} more errors`;
           }
         };
@@ -372,7 +372,7 @@ export default function UploadPage() {
                         <div className="mt-4 text-amber-700 bg-amber-50 p-3 rounded-md text-sm">
                           <p className="font-medium">⚠️ Estimated processing time: {formatTime(estimatedTime)}</p>
                           <p className="mt-1">Resumes will be processed in batches to comply with API rate limits.</p>
-                          <p className="mt-1">Please don't close this window during processing.</p>
+                          <p className="mt-1">Please don&apos;t close this window during processing.</p>
                         </div>
                       )}
                     </div>
