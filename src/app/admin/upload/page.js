@@ -349,7 +349,7 @@ export default function UploadPage() {
                               <svg className="flex-shrink-0 h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
                                 <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clipRule="evenodd" />
                               </svg>
-                              <span className="ml-2 flex-1 w-0 truncate">{file.name}</span>
+                              <span className="ml-2 flex-1 w-0 truncate text-gray-900">{file.name}</span>
                             </div>
                             <div className="ml-4 flex-shrink-0 text-gray-400">
                               {(file.size / 1024 / 1024).toFixed(2)} MB

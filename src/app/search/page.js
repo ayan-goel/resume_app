@@ -210,13 +210,6 @@ export default function SearchPage() {
     <div className="min-h-screen bg-[#f5f5f7] py-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between mb-10">
-          <Link href="/" className="text-[#0071e3] hover:text-[#0077ed] transition-colors flex items-center">
-            <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-            </svg>
-            Back to Home
-          </Link>
-          
           {user?.role === 'admin' && (
             <div className="flex items-center space-x-4">
               <span className="text-xs text-[#86868b] px-2 py-1 rounded-full bg-[#f5f5f7] border border-[#d2d2d7]">
