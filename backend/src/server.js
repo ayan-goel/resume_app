@@ -12,7 +12,7 @@ const PORT = process.env.PORT || 5000;
 // Middleware
 app.use(cors({
   origin: process.env.NODE_ENV === 'production' 
-    ? ['https://gtakpsi-resume-app.vercel.app/', 'https://gtakpsi-resume-app-backend.org:5000/api'] 
+    ? ['https://gtakpsi-resume-app.vercel.app', 'https://gtakpsi-resume-app-backend.org'] 
     : 'http://localhost:3000',
   credentials: true
 }));
