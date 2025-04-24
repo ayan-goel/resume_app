@@ -13,10 +13,10 @@ A web application for managing and searching through a collection of member resu
 ## Tech Stack
 
 - **Frontend**: Next.js with JavaScript and Tailwind CSS
-- **Backend**: Node.js with Express (not implemented in this initial version)
-- **Database**: PostgreSQL (not implemented in this initial version)
-- **Storage**: AWS S3 (not implemented in this initial version)
-- **Search**: Full-text search via PostgreSQL (to be implemented)
+- **Backend**: Node.js with Express
+- **Database**: PostgreSQL
+- **Storage**: AWS S3
+- **Deployment**: Vercel and AWS EC2
 
 ## Getting Started
 
