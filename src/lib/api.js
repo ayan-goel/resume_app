@@ -2,7 +2,7 @@ import axios from 'axios';
 
 // Create an axios instance with default config
 const api = axios.create({
-  baseURL: 'https://gtakpsi-resume-app-backend.org',
+  baseURL: 'https://gtakpsi-resume-app-backend.org/api',
   headers: {
     'Content-Type': 'application/json',
   },
