@@ -5,6 +5,7 @@ import { formatGraduationYear } from "@/lib/utils";
 import dynamic from "next/dynamic";
 import { useAuth } from "@/lib/AuthContext";
 import { resumeAPI } from "@/lib/api";
+import { BriefcaseIcon, AcademicCapIcon, CalendarIcon } from '@heroicons/react/24/outline';
 
 // Dynamically import PdfViewer to avoid SSR issues
 const PdfViewer = dynamic(() => import("./PdfViewer"), {
@@ -26,7 +27,9 @@ export default function ResumeCard({ resume, onDelete }) {
 
   if (!resume) return null;
 
-  const { id, name, major, graduationYear, pdfUrl, signedPdfUrl } = resume;
+  const { id, name, major, graduationYear, pdfUrl, signedPdfUrl, companies } = resume;
+
+  const companyList = Array.isArray(companies) ? companies : [];
 
   const togglePdfView = () => {
     setShowPdf(!showPdf);
@@ -60,8 +63,8 @@ export default function ResumeCard({ resume, onDelete }) {
   return (
     <div className="bg-white rounded-2xl shadow-sm overflow-hidden hover:shadow-md transition-shadow flex flex-col">
       <div className="px-6 py-5 flex-grow">
-        <div className="flex items-center justify-between">
-          <h3 className="text-lg font-medium text-[#1d1d1f] truncate">{name}</h3>
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-lg font-semibold text-[#1d1d1f] truncate" title={name}>{name}</h3>
           <div className="ml-2 flex-shrink-0 flex space-x-2">
             {isAdmin && (
               <button
@@ -76,13 +79,32 @@ export default function ResumeCard({ resume, onDelete }) {
           </div>
         </div>
         
-        <div className="mt-2 flex flex-wrap gap-2">
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs bg-blue-50 text-[#0071e3]">
-            {major}
-          </span>
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs bg-gray-100 text-[#6e6e73]">
-            {formatGraduationYear(graduationYear)}
-          </span>
+        <div className="mt-3 space-y-3 text-sm text-[#6e6e73]">
+          <div className="flex items-center space-x-2">
+            <AcademicCapIcon className="h-5 w-5 text-gray-400 flex-shrink-0" />
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs bg-blue-50 text-[#0071e3]">
+              {major}
+            </span>
+          </div>
+          <div className="flex items-center space-x-2">
+            <CalendarIcon className="h-5 w-5 text-gray-400 flex-shrink-0" />
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs bg-gray-100 text-[#6e6e73]">
+              {formatGraduationYear(graduationYear)}
+            </span>
+          </div>
+          
+          {companyList.length > 0 && (
+            <div className="flex items-center space-x-2">
+              <BriefcaseIcon className="h-5 w-5 text-gray-400 flex-shrink-0" />
+              <div className="flex flex-wrap gap-1.5">
+                {companyList.map((company, index) => (
+                  <span key={index} className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs bg-green-50 text-green-700">
+                    {company}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
       

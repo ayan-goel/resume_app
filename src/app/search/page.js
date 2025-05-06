@@ -185,6 +185,13 @@ export default function SearchPage() {
     }).filter(Boolean); // Remove null items (duplicates)
   };
   
+  // Sort resumes alphabetically by name
+  const sortedResumes = [...filteredResumes].sort((a, b) => {
+    const nameA = a.name || '';
+    const nameB = b.name || '';
+    return nameA.localeCompare(nameB);
+  });
+
   // Handle delete callback from ResumeCard
   const handleResumeDelete = (deletedId) => {
     // Update the displayed resumes by filtering out the deleted one
@@ -380,9 +387,14 @@ export default function SearchPage() {
                 <p className="mt-1 text-[#6e6e73]">Try adjusting your filters</p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                {filteredResumes.map(resume => (
-                  <ResumeCard key={resume.id} resume={resume} onDelete={handleResumeDelete} />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {sortedResumes.map((resume) => (
+                  <ResumeCard 
+                    key={resume.id} 
+                    resume={resume} 
+                    isAdmin={user?.role === 'admin'}
+                    onDelete={handleResumeDelete}
+                  />
                 ))}
               </div>
             )}
