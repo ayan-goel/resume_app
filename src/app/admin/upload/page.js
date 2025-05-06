@@ -24,7 +24,7 @@ export default function UploadPage() {
   // Update the time estimation for Flash model
   useEffect(() => {
     if (files.length > 0) {
-      // Calculate based on batches of 10 with 10s delays between batches
+      // Calculate based on batches of 3 with 10s delays between batches
       // Each file takes roughly 6s to process + 1s delay between files
       const BATCH_SIZE = 10;
       const SECONDS_PER_FILE = 6;
@@ -144,8 +144,8 @@ export default function UploadPage() {
     setIsSubmitting(true);
     setUploadProgress({ current: 0, total: files.length, success: 0, failed: 0 });
     
-    // Process files in batches of 10 with shorter delays between batches
-    const BATCH_SIZE = 10;
+    // Process files in batches of 3 with shorter delays between batches
+    const BATCH_SIZE = 3;
     const BATCH_DELAY = 10000; // 10 seconds
     let totalSuccessCount = 0;
     let totalFailedCount = 0;

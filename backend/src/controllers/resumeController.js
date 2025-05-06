@@ -72,254 +72,323 @@ const uploadResume = async (req, res) => {
   let transaction;
   let s3Key = null;
   let currentStep = 'initialization';
-  
+  const originalFilename = req.file?.originalname || 'Unnamed file';
+
   try {
     // Log request details for debugging
-    console.log(`Starting resume upload: ${req.file?.originalname || 'Unnamed file'}, size: ${req.file?.size || 'unknown'} bytes`);
-    
+    console.log(`[${originalFilename}] Starting resume upload. Size: ${req.file?.size || 'unknown'} bytes`);
+
     currentStep = 'transaction_begin';
     transaction = await sequelize.transaction();
-    
+    console.log(`[${originalFilename}] Transaction started.`);
+
     currentStep = 'validation';
     if (!req.file) {
+      console.error(`[${originalFilename}] Validation failed: No PDF file uploaded.`);
+      // No transaction to rollback here, just return error
       return res.status(400).json({ error: true, message: 'No PDF file uploaded.' });
     }
 
     // Check if file buffer is valid
     if (!req.file.buffer || req.file.buffer.length === 0) {
+      console.error(`[${originalFilename}] Validation failed: Empty file content.`);
+      await transaction.rollback(); // Rollback transaction
       return res.status(400).json({ error: true, message: 'Empty file content.' });
     }
-    
+
     // Check if file is too large (>10MB)
     if (req.file.buffer.length > 10 * 1024 * 1024) {
+       console.error(`[${originalFilename}] Validation failed: File too large (${req.file.buffer.length} bytes).`);
+       await transaction.rollback(); // Rollback transaction
       return res.status(400).json({ error: true, message: 'File too large. Maximum file size is 10MB.' });
     }
-    
+
     // Check PDF header - most PDFs start with %PDF
     const header = req.file.buffer.slice(0, 4).toString();
     if (header !== '%PDF') {
+      console.error(`[${originalFilename}] Validation failed: Invalid PDF header "${header}".`);
+      await transaction.rollback(); // Rollback transaction
       return res.status(400).json({ error: true, message: 'Invalid PDF file format.' });
     }
+    console.log(`[${originalFilename}] Validation successful.`);
 
     // Parse the resume to extract information
-    console.log(`Parsing resume: ${req.file.originalname || 'Unnamed file'}, size: ${req.file.buffer.length} bytes`);
+    console.log(`[${originalFilename}] Parsing resume...`);
     currentStep = 'resume_parsing';
-    
+
     // Extract the filename without extension as a fallback name
     const filenameWithoutExt = req.file.originalname
       ? req.file.originalname.replace(/\.[^/.]+$/, "") // Remove file extension
       : `Resume_${Date.now()}`;
-    
+
     let parsedData;
+    let parsingErrorMessage = null;
     try {
       // Parse the resume (filename used as fallback)
       parsedData = await parseResume(req.file.buffer, filenameWithoutExt);
+      console.log(`[${originalFilename}] Parsing successful. Extracted name: ${parsedData?.name}`);
     } catch (parseError) {
-      console.error('Error in resume parsing, using fallback data:', parseError);
+      parsingErrorMessage = parseError.message || "Unknown parsing error";
+      console.error(`[${originalFilename}] Error during resume parsing: ${parsingErrorMessage}. Using fallback data.`, parseError);
+      // Use fallback data structure
       parsedData = {
-        name: filenameWithoutExt,
+        name: filenameWithoutExt, // Use filename as fallback name
         major: 'Unspecified',
         graduationYear: 'Unspecified',
         companies: [],
         keywords: []
       };
     }
-    
+
     currentStep = 'data_processing';
-    
+    console.log(`[${originalFilename}] Processing extracted/fallback data...`);
+
     // Get name from form or extract from PDF filename
     let name = req.body.name;
-    
+
     // If name is not provided in the form, use the parsed name or filename
     if (!name) {
       // First, check if we have a name in the parsed data
-      if (parsedData.name) {
+      if (parsedData.name && parsedData.name.trim() !== '') {
         name = parsedData.name;
+         console.log(`[${originalFilename}] Using parsed name: ${name}`);
       } else {
         // Use filename as last resort
         name = filenameWithoutExt;
+         console.log(`[${originalFilename}] Using filename as fallback name: ${name}`);
       }
+    } else {
+       console.log(`[${originalFilename}] Using provided name from form: ${name}`);
     }
-    
+
     // Ensure name is not empty and properly formatted
     if (!name || name.trim() === '') {
-      name = 'Unknown Resume ' + Date.now();
+      name = `Unknown_Resume_${Date.now()}`;
+      console.warn(`[${originalFilename}] Name was empty, defaulted to: ${name}`);
     }
-    
+
     // Truncate name if it's too long for the database
     if (name.length > 255) {
+       console.warn(`[${originalFilename}] Name too long (${name.length} chars), truncating.`);
       name = name.substring(0, 252) + '...';
     }
-    
+
     // Get data from parsed resume or form inputs (fallback)
     let major = req.body.major || parsedData.major || '';
     let graduationYear = req.body.graduationYear || parsedData.graduationYear || '';
-    
+
     // Validate major - don't allow empty values
     if (!major || major.trim() === '') {
+       console.warn(`[${originalFilename}] Major was empty, defaulting to 'Unspecified'. Parsed value was: "${parsedData.major}"`);
       major = 'Unspecified';
     }
-    
+
     // Truncate major if it's too long
     if (major.length > 255) {
+      console.warn(`[${originalFilename}] Major too long (${major.length} chars), truncating.`);
       major = major.substring(0, 252) + '...';
     }
-    
+
     // If graduation year is invalid, use a placeholder
     if (!graduationYear || graduationYear.trim() === '') {
+       console.warn(`[${originalFilename}] Graduation year was empty, defaulting to 'Unspecified'. Parsed value was: "${parsedData.graduationYear}"`);
       graduationYear = 'Unspecified';
     }
-    
+
     // Truncate graduation year if needed
     if (graduationYear.length > 255) {
-      graduationYear = 'Unspecified';
+      console.warn(`[${originalFilename}] Graduation year too long (${graduationYear.length} chars), defaulting to 'Unspecified'.`);
+      graduationYear = 'Unspecified'; // Default instead of truncating potentially meaningless year
     }
-    
+
     // Get companies and keywords from parsed data (if not provided)
     let companyList = req.body.companies
       ? req.body.companies.split(',').map(c => c.trim()).filter(Boolean)
       : parsedData.companies || [];
-      
+
     let keywordList = req.body.keywords
       ? req.body.keywords.split(',').map(k => k.trim()).filter(Boolean)
       : parsedData.keywords || [];
-    
+
     // Ensure company and keyword lists don't exceed reasonable limits
     if (companyList.length > 100) {
-      console.warn(`Truncating company list from ${companyList.length} to 100 items`);
+      console.warn(`[${originalFilename}] Truncating company list from ${companyList.length} to 100 items`);
       companyList = companyList.slice(0, 100);
     }
-    
+
     if (keywordList.length > 100) {
-      console.warn(`Truncating keyword list from ${keywordList.length} to 100 items`);
+      console.warn(`[${originalFilename}] Truncating keyword list from ${keywordList.length} to 100 items`);
       keywordList = keywordList.slice(0, 100);
     }
 
+    // --- Deduplicate Company and Keyword Lists --- 
+    const uniqueCompanyList = [...new Set(companyList)];
+    const uniqueKeywordList = [...new Set(keywordList)];
+
+    console.log(`[${originalFilename}] Data processed. Name: "${name}", Major: "${major}", GradYear: "${graduationYear}", Unique Companies: ${uniqueCompanyList.length}, Unique Keywords: ${uniqueKeywordList.length}`);
+
     // Generate S3 key for the file
     const timestamp = Date.now();
-    const sanitizedName = name.toLowerCase().replace(/[^a-z0-9]/g, '_').substring(0, 100);
-    s3Key = `resumes/${sanitizedName}_${timestamp}.pdf`;
-    
+    const sanitizedName = name.toLowerCase().replace(/[^a-z0-9]/g, '_').substring(0, 100); // Ensure sanitization doesn't create empty string
+    const safeSanitizedName = sanitizedName || `resume_${timestamp}`; // Fallback if name sanitization results in empty
+    s3Key = `resumes/${safeSanitizedName}_${timestamp}.pdf`;
+
     // Upload file to S3 with proper error handling
     currentStep = 's3_upload';
     let pdfUrl;
     try {
-      console.log(`Uploading file to S3: ${s3Key}`);
+      console.log(`[${originalFilename}] Uploading file to S3 as: ${s3Key}`);
       pdfUrl = await uploadFile(
         req.file.buffer,
         s3Key,
         'application/pdf'
       );
-      console.log(`S3 upload successful: ${pdfUrl}`);
+      console.log(`[${originalFilename}] S3 upload successful: ${pdfUrl}`);
     } catch (s3Error) {
-      console.error('S3 upload error:', s3Error);
-      // If the S3 upload fails, we still want to create the record
-      // but with a placeholder URL
-      pdfUrl = `failed-upload-${timestamp}`;
-      s3Key = null; // Clear S3 key so we don't try to delete a non-existent file later
+      // Critical failure: S3 upload failed. We cannot proceed without the file URL.
+      console.error(`[${originalFilename}] CRITICAL S3 upload error for key ${s3Key}:`, s3Error);
+      // Throw the error to be caught by the main catch block, triggering rollback
+      throw new Error(`S3 upload failed: ${s3Error.message}`);
     }
-    
+
     // Create resume record
     currentStep = 'database_create';
-    console.log(`Creating database record for: ${name}`);
-    
+    console.log(`[${originalFilename}] Creating database record...`);
+
     let resume;
     try {
       resume = await Resume.create({
         name,
         major,
         graduationYear,
-        pdfUrl,
-        s3Key: s3Key || `failed-upload-${timestamp}`, // Store something even if S3 failed
+        pdfUrl, // Use the confirmed S3 URL
+        s3Key,   // Use the confirmed S3 key
         uploadedBy: req.user.id
       }, { transaction });
+      console.log(`[${originalFilename}] Database record created successfully. ID: ${resume.id}`);
     } catch (dbError) {
-      console.error('Database create error:', dbError);
+      console.error(`[${originalFilename}] Database create error:`, dbError);
+      // Add more specific logging for validation errors
+      if (dbError.name === 'SequelizeValidationError') {
+        console.error(`[${originalFilename}] Validation Errors:`, JSON.stringify(dbError.errors, null, 2));
+      }
+      // Throw error to be caught by main catch block -> triggers rollback & S3 cleanup
       throw new Error(`Database create failed: ${dbError.message}`);
     }
-    
+
     // Find or create companies and associate with resume
     currentStep = 'associate_companies';
     try {
-      console.log(`Associating ${companyList.length} companies with resume`);
-      const companyObjects = await findOrCreateCompanies(companyList);
-      await resume.setCompanies(companyObjects, { transaction });
+      if (uniqueCompanyList.length > 0) { // Use unique list
+        console.log(`[${originalFilename}] Associating ${uniqueCompanyList.length} unique companies...`);
+        const companyObjects = await findOrCreateCompanies(uniqueCompanyList); // Use unique list
+        await resume.setCompanies(companyObjects, { transaction });
+        console.log(`[${originalFilename}] Companies associated successfully.`);
+      } else {
+        console.log(`[${originalFilename}] No companies to associate.`);
+      }
     } catch (companyError) {
-      console.error('Error associating companies:', companyError);
-      // Continue with the upload even if company association fails
+      // Log the error but don't necessarily fail the entire upload
+      console.error(`[${originalFilename}] Error associating companies: ${companyError.message}. Continuing transaction.`, companyError);
+      // Optionally, you could decide to throw here if company association is critical
     }
-    
+
     // Find or create keywords and associate with resume
     currentStep = 'associate_keywords';
     try {
-      console.log(`Associating ${keywordList.length} keywords with resume`);
-      const keywordObjects = await findOrCreateKeywords(keywordList);
-      await resume.setKeywords(keywordObjects, { transaction });
+      if (uniqueKeywordList.length > 0) { // Use unique list
+        console.log(`[${originalFilename}] Associating ${uniqueKeywordList.length} unique keywords...`);
+        const keywordObjects = await findOrCreateKeywords(uniqueKeywordList); // Use unique list
+        await resume.setKeywords(keywordObjects, { transaction });
+        console.log(`[${originalFilename}] Keywords associated successfully.`);
+      } else {
+         console.log(`[${originalFilename}] No keywords to associate.`);
+      }
     } catch (keywordError) {
-      console.error('Error associating keywords:', keywordError);
-      // Continue with the upload even if keyword association fails
+      // Log the error but don't necessarily fail the entire upload
+      console.error(`[${originalFilename}] Error associating keywords: ${keywordError.message}. Continuing transaction.`, keywordError);
+      // Optionally, you could decide to throw here if keyword association is critical
     }
-    
+
     // Commit transaction
     currentStep = 'transaction_commit';
-    console.log(`Committing transaction`);
+    console.log(`[${originalFilename}] Committing transaction...`);
     await transaction.commit();
     transaction = null; // Clear transaction since it's committed
-    
-    console.log(`Resume upload complete: ${name}`);
+    console.log(`[${originalFilename}] Transaction committed. Upload complete.`);
+
     res.status(201).json({
       error: false,
-      message: 'Resume uploaded successfully.',
+      message: `Resume "${originalFilename}" uploaded successfully.`,
       data: {
         id: resume.id,
         name: resume.name,
         major: resume.major,
         graduationYear: resume.graduationYear,
         pdfUrl: resume.pdfUrl,
-        companies: [], // Just return empty arrays since we might not have these after errors
-        keywords: []
+        // Include parsing error message if one occurred, even on success
+        parsingWarning: parsingErrorMessage,
+        companies: uniqueCompanyList, // Return the unique lists used
+        keywords: uniqueKeywordList
       }
     });
   } catch (error) {
+    console.error(`[${originalFilename}] Upload failed at step: ${currentStep}. Error: ${error.message}`);
+
     // Roll back transaction if it exists and hasn't been committed
     if (transaction) {
       try {
-        console.log(`Rolling back transaction due to error in step: ${currentStep}`);
+        console.log(`[${originalFilename}] Rolling back transaction due to error...`);
         await transaction.rollback();
+         console.log(`[${originalFilename}] Transaction rolled back successfully.`);
       } catch (rollbackError) {
-        console.error('Error rolling back transaction:', rollbackError);
+        console.error(`[${originalFilename}] CRITICAL: Error rolling back transaction:`, rollbackError);
       }
+    } else {
+       console.log(`[${originalFilename}] No active transaction to roll back (error occurred before or after transaction).`);
     }
-    
-    // If we created an S3 file but the database operation failed, try to clean up the S3 file
-    if (s3Key) {
+
+    // If we created an S3 file but the database operation failed AFTER S3 upload, try to clean up the S3 file
+    // Only attempt delete if s3Key is set AND the error occurred AFTER s3_upload step
+    const errorAfterS3 = ['database_create', 'associate_companies', 'associate_keywords', 'transaction_commit'].includes(currentStep);
+    if (s3Key && errorAfterS3) {
       try {
-        console.log(`Cleaning up S3 file after error: ${s3Key}`);
+        console.log(`[${originalFilename}] Cleaning up S3 file (${s3Key}) after error...`);
         await deleteFile(s3Key);
+        console.log(`[${originalFilename}] S3 file cleanup successful.`);
       } catch (deleteError) {
-        console.error('Error cleaning up S3 file after failed upload:', deleteError);
+        // Log this error but don't overwrite the original error response
+        console.error(`[${originalFilename}] Error cleaning up S3 file (${s3Key}) after failed upload:`, deleteError);
       }
+    } else if (s3Key) {
+       console.log(`[${originalFilename}] S3 cleanup skipped. Error occurred at or before S3 upload step (${currentStep}).`);
     }
-    
-    console.error(`Resume upload error in step ${currentStep}:`, error);
-    console.error('Error details:', JSON.stringify({
+
+    // Log the detailed error
+    console.error(`[${originalFilename}] Full error details:`, JSON.stringify({
       name: error.name,
       message: error.message,
-      stack: error.stack,
+      step: currentStep,
+      stack: error.stack?.split('\n').slice(0, 5).join('\n'), // Limit stack trace length
       code: error.code
     }, null, 2));
-    
-    // Provide more specific error messages based on the error type
-    let errorMessage = `Error uploading resume (${currentStep}): ${error.message}`;
-    if (error.name === 'SequelizeValidationError') {
-      errorMessage = 'Invalid resume data: ' + error.message;
+
+    // Provide more specific error messages based on the error type and step
+    let userMessage = `Error uploading resume "${originalFilename}" during step: ${currentStep}.`;
+    if (currentStep === 'resume_parsing') {
+      userMessage = `Failed to parse resume content for "${originalFilename}". Please check if the PDF is valid and not password-protected.`;
+    } else if (error.name === 'SequelizeValidationError' || (currentStep === 'database_create' && error.message.includes('null'))) {
+      userMessage = `Failed to save resume "${originalFilename}" due to missing required data (e.g., name, major, grad year) after parsing. Check PDF content.`;
     } else if (error.name === 'SequelizeUniqueConstraintError') {
-      errorMessage = 'A resume with this information already exists.';
-    } else if (error.message && error.message.includes('S3')) {
-      errorMessage = 'Error storing resume file: ' + error.message;
+      userMessage = `A resume similar to "${originalFilename}" might already exist.`;
+    } else if (currentStep === 's3_upload' || error.message.includes('S3')) {
+      userMessage = `Error storing the file for resume "${originalFilename}". Please try again.`;
+    } else {
+       // Generic fallback for other errors
+       userMessage = `An unexpected error occurred while processing "${originalFilename}": ${error.message}`;
     }
-    
-    res.status(500).json({ error: true, message: errorMessage });
+
+    res.status(500).json({ error: true, message: userMessage, details: error.message });
   }
 };
 
