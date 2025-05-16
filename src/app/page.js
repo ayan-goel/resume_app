@@ -44,8 +44,7 @@ export default function Home() {
                   height={320}
                   priority
                   loading="eager"
-                  placeholder="blur"
-                  blurDataURL="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
+                  placeholder="empty"
                   className="h-auto object-contain relative z-10"
                   style={{ 
                     filter: 'drop-shadow(0 0 9px rgba(59, 130, 246, 0.4))'
