@@ -2,14 +2,26 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/AuthContext";
+import { useSupabaseAuth } from "@/lib/SupabaseAuthContext";
 import LogoutButton from "./LogoutButton";
 
 export default function Header() {
   const pathname = usePathname();
+  const router = useRouter();
   const { user, isAuthenticated, isLoading } = useAuth();
+  const { user: supabaseUser, isAuthenticated: isSupabaseAuthenticated, isLoading: isSupabaseLoading, signOut } = useSupabaseAuth();
   const [scrolled, setScrolled] = useState(false);
+  
+  // Debug auth state
+  useEffect(() => {
+    console.log('Header component - Supabase auth state:', {
+      isAuthenticated: isSupabaseAuthenticated,
+      isLoading: isSupabaseLoading,
+      user: supabaseUser ? `${supabaseUser.email} (${supabaseUser.id})` : 'none'
+    });
+  }, [isSupabaseAuthenticated, isSupabaseLoading, supabaseUser]);
   
   // Function to check if a path is active
   const isActive = (path) => {
@@ -18,6 +30,28 @@ export default function Header() {
 
   // Check if user is admin
   const isAdmin = user?.role === "admin";
+
+  // Handle resume search button click
+  const handleResumeSearchClick = (e) => {
+    e.preventDefault();
+    // If user is not authenticated with Supabase, redirect to login page
+    if (!isSupabaseAuthenticated && !isSupabaseLoading) {
+      router.push('/auth/member-login');
+    } else {
+      router.push('/search');
+    }
+  };
+
+  // Handle sign out
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      // Force a page refresh to clear auth state completely
+      window.location.href = '/';
+    } catch (error) {
+      console.error('Error signing out:', error);
+    }
+  };
 
   // Apply scrolled styles to header
   useEffect(() => {
@@ -45,6 +79,7 @@ export default function Header() {
               <Link 
                 href="/search" 
                 className={`text-sm font-medium text-[#1d1d1f] hover:text-[#0071e3] transition-colors ${isActive('/search')}`}
+                onClick={handleResumeSearchClick}
               >
                 Resume Search
               </Link>
@@ -61,8 +96,41 @@ export default function Header() {
           </div>
 
           <div className="flex items-center space-x-4">
-            {isLoading ? (
+            {/* Supabase User Authentication */}
+            {isSupabaseLoading ? (
               <div className="h-8 w-20 animate-pulse rounded-full bg-gray-200"></div>
+            ) : isSupabaseAuthenticated ? (
+              <div className="flex items-center space-x-4">
+                <span className="text-sm text-[#1d1d1f]">
+                  {supabaseUser.email}
+                </span>
+                <button
+                  onClick={handleSignOut}
+                  className="text-sm text-[#0071e3] hover:text-[#0077ed] transition-colors"
+                >
+                  Sign Out
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center space-x-4">
+                <Link
+                  href="/auth/member-login"
+                  className="text-sm font-medium text-[#0071e3] hover:text-[#0077ed] transition-colors"
+                >
+                  Sign In
+                </Link>
+                <Link
+                  href="/auth/member-register"
+                  className="text-sm font-medium bg-[#0071e3] text-white hover:bg-[#0077ed] px-3 py-1 rounded-lg transition-colors"
+                >
+                  Sign Up
+                </Link>
+              </div>
+            )}
+
+            {/* Admin Authentication - keep this separate */}
+            {isLoading ? (
+              <div className="h-8 w-6 animate-pulse rounded-full bg-gray-200"></div>
             ) : isAuthenticated ? (
               <div className="flex items-center space-x-4">
                 <span className="text-sm text-[#1d1d1f]">
@@ -89,6 +157,7 @@ export default function Header() {
           <Link 
             href="/search" 
             className={`text-sm font-medium text-[#1d1d1f] hover:text-[#0071e3] transition-colors ${isActive('/search')}`}
+            onClick={handleResumeSearchClick}
           >
             Resume Search
           </Link>

@@ -6,8 +6,9 @@ import ResumeCard from "@/components/resume/ResumeCard";
 import { debounce } from "@/lib/utils";
 import { resumeAPI } from "@/lib/api"; // Import resume API
 import { useAuth } from "@/lib/AuthContext"; // Add auth context
+import ProtectedRoute from "@/components/ProtectedRoute";
 
-export default function SearchPage() {
+export default function Search() {
   const [filters, setFilters] = useState({
     major: [],
     company: [],
@@ -214,193 +215,195 @@ export default function SearchPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f5f5f7] py-12">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between mb-10">
-          {user?.role === 'admin' && (
-            <div className="flex items-center space-x-4">
-              <span className="text-xs text-[#86868b] px-2 py-1 rounded-full bg-[#f5f5f7] border border-[#d2d2d7]">
-                Admin Mode
-              </span>
-              <button 
-                onClick={() => {
-                  if (window.confirm('Are you sure you want to delete ALL resumes? This action cannot be undone.')) {
-                    setLoading(true);
-                    resumeAPI.deleteAll()
-                      .then(() => {
-                        alert('All resumes have been deleted successfully.');
-                        setFilteredResumes([]);
-                      })
-                      .catch(err => {
-                        console.error('Error deleting all resumes:', err);
-                        alert('Failed to delete all resumes. Please try again.');
-                      })
-                      .finally(() => {
-                        setLoading(false);
-                      });
-                  }
-                }}
-                className="bg-[#ff3b30] hover:bg-red-600 text-white text-xs px-3 py-1 rounded-full transition-colors"
-              >
-                Delete All Resumes
-              </button>
-            </div>
-          )}
-        </div>
-        
-        <div className="mb-8 text-center">
-          <h1 className="text-3xl md:text-4xl font-semibold text-[#1d1d1f] mb-4">
-            Resume Search
-          </h1>
-          <p className="text-[#6e6e73] max-w-2xl mx-auto mb-6">
-            Find members by skills, experience, or academic background
-          </p>
-          
-          {/* Add general search box */}
-          <div className="max-w-xl mx-auto">
-            <div className="relative">
-              <input
-                type="text"
-                value={generalSearch}
-                onChange={handleGeneralSearchChange}
-                placeholder="Search by name, major, skills, company experience..."
-                className="w-full px-4 py-3 pl-10 text-[#1d1d1f] border border-[#d2d2d7] rounded-full focus:ring-2 focus:ring-[#0071e3] focus:border-[#0071e3] placeholder-[#86868b]"
-              />
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <svg className="h-5 w-5 text-[#86868b]" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-                </svg>
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
-          {/* Filters Panel */}
-          <div className="lg:col-span-1">
-            <div className="bg-white rounded-2xl shadow-sm p-6">
-              <h2 className="font-medium text-lg text-[#1d1d1f] mb-6">Filters</h2>
-              
-              {/* Name Search - Add this section */}
-              <div className="mb-6">
-                <h3 className="font-medium text-sm text-[#6e6e73] uppercase tracking-wider mb-3">Name Search</h3>
-                <div className="mb-2">
-                  <input
-                    type="text"
-                    value={nameSearch}
-                    onChange={handleNameSearchChange}
-                    placeholder="Search by name..."
-                    className="w-full px-3 py-2 text-sm text-[#1d1d1f] border border-[#d2d2d7] rounded-lg focus:ring-1 focus:ring-[#0071e3] focus:border-[#0071e3]"
-                  />
-                </div>
-              </div>
-              
-              {/* Filter Sections */}
-              <div className="space-y-8">
-                {/* Major Filter */}
-                <div>
-                  <h3 className="font-medium text-sm text-[#6e6e73] uppercase tracking-wider mb-3">Major</h3>
-                  <div className="mb-2">
-                    <input
-                      type="text"
-                      value={filterSearch.major}
-                      onChange={(e) => handleFilterSearchChange('major', e.target.value)}
-                      placeholder="Search majors..."
-                      className="w-full px-3 py-2 text-sm text-[#1d1d1f] border border-[#d2d2d7] rounded-lg focus:ring-1 focus:ring-[#0071e3] focus:border-[#0071e3]"
-                    />
-                  </div>
-                  <div className="space-y-2 max-h-48 overflow-y-auto pr-2 mt-2">
-                    {renderFilterItems(availableFilters.majors, 'major')}
-                  </div>
-                </div>
-                
-                {/* Company Filter */}
-                <div>
-                  <h3 className="font-medium text-sm text-[#6e6e73] uppercase tracking-wider mb-3">Company</h3>
-                  <div className="mb-2">
-                    <input
-                      type="text"
-                      value={filterSearch.company}
-                      onChange={(e) => handleFilterSearchChange('company', e.target.value)}
-                      placeholder="Search companies..."
-                      className="w-full px-3 py-2 text-sm text-[#1d1d1f] border border-[#d2d2d7] rounded-lg focus:ring-1 focus:ring-[#0071e3] focus:border-[#0071e3]"
-                    />
-                  </div>
-                  <div className="space-y-2 max-h-48 overflow-y-auto pr-2 mt-2">
-                    {renderFilterItems(availableFilters.companies, 'company')}
-                  </div>
-                </div>
-                
-                {/* Graduation Year Filter */}
-                <div>
-                  <h3 className="font-medium text-sm text-[#6e6e73] uppercase tracking-wider mb-3">Graduation Year</h3>
-                  <div className="mb-2">
-                    <input
-                      type="text"
-                      value={filterSearch.graduationYear}
-                      onChange={(e) => handleFilterSearchChange('graduationYear', e.target.value)}
-                      placeholder="Search years..."
-                      className="w-full px-3 py-2 text-sm text-[#1d1d1f] border border-[#d2d2d7] rounded-lg focus:ring-1 focus:ring-[#0071e3] focus:border-[#0071e3]"
-                    />
-                  </div>
-                  <div className="space-y-2 max-h-48 overflow-y-auto pr-2 mt-2">
-                    {renderFilterItems(availableFilters.graduationYears, 'graduationYear')}
-                  </div>
-                </div>
-                
-                {/* Keyword Filter */}
-                <div>
-                  <h3 className="font-medium text-sm text-[#6e6e73] uppercase tracking-wider mb-3">Skills</h3>
-                  <div className="mb-2">
-                    <input
-                      type="text"
-                      value={filterSearch.keyword}
-                      onChange={(e) => handleFilterSearchChange('keyword', e.target.value)}
-                      placeholder="Search skills..."
-                      className="w-full px-3 py-2 text-sm text-[#1d1d1f] border border-[#d2d2d7] rounded-lg focus:ring-1 focus:ring-[#0071e3] focus:border-[#0071e3]"
-                    />
-                  </div>
-                  <div className="space-y-2 max-h-48 overflow-y-auto pr-2 mt-2">
-                    {renderFilterItems(availableFilters.keywords, 'keyword')}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          {/* Resume Cards */}
-          <div className="lg:col-span-4">
-            {loading ? (
-              <div className="flex justify-center items-center h-64">
-                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#0071e3]"></div>
-              </div>
-            ) : error ? (
-              <div className="bg-red-50 border border-red-100 text-red-500 rounded-xl p-4 text-center">
-                {error}
-              </div>
-            ) : filteredResumes.length === 0 ? (
-              <div className="text-center py-12 px-4 bg-white rounded-2xl shadow-sm">
-                <svg className="mx-auto h-12 w-12 text-[#86868b]" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <h3 className="mt-4 text-lg font-medium text-[#1d1d1f]">No resumes found</h3>
-                <p className="mt-1 text-[#6e6e73]">Try adjusting your filters</p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {sortedResumes.map((resume) => (
-                  <ResumeCard 
-                    key={resume.id} 
-                    resume={resume} 
-                    isAdmin={user?.role === 'admin'}
-                    onDelete={handleResumeDelete}
-                  />
-                ))}
+    <ProtectedRoute>
+      <div className="min-h-screen bg-[#f5f5f7] py-12">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between mb-10">
+            {user?.role === 'admin' && (
+              <div className="flex items-center space-x-4">
+                <span className="text-xs text-[#86868b] px-2 py-1 rounded-full bg-[#f5f5f7] border border-[#d2d2d7]">
+                  Admin Mode
+                </span>
+                <button 
+                  onClick={() => {
+                    if (window.confirm('Are you sure you want to delete ALL resumes? This action cannot be undone.')) {
+                      setLoading(true);
+                      resumeAPI.deleteAll()
+                        .then(() => {
+                          alert('All resumes have been deleted successfully.');
+                          setFilteredResumes([]);
+                        })
+                        .catch(err => {
+                          console.error('Error deleting all resumes:', err);
+                          alert('Failed to delete all resumes. Please try again.');
+                        })
+                        .finally(() => {
+                          setLoading(false);
+                        });
+                    }
+                  }}
+                  className="bg-[#ff3b30] hover:bg-red-600 text-white text-xs px-3 py-1 rounded-full transition-colors"
+                >
+                  Delete All Resumes
+                </button>
               </div>
             )}
           </div>
+          
+          <div className="mb-8 text-center">
+            <h1 className="text-3xl md:text-4xl font-semibold text-[#1d1d1f] mb-4">
+              Resume Search
+            </h1>
+            <p className="text-[#6e6e73] max-w-2xl mx-auto mb-6">
+              Find members by skills, experience, or academic background
+            </p>
+            
+            {/* Add general search box */}
+            <div className="max-w-xl mx-auto">
+              <div className="relative">
+                <input
+                  type="text"
+                  value={generalSearch}
+                  onChange={handleGeneralSearchChange}
+                  placeholder="Search by name, major, skills, company experience..."
+                  className="w-full px-4 py-3 pl-10 text-[#1d1d1f] border border-[#d2d2d7] rounded-full focus:ring-2 focus:ring-[#0071e3] focus:border-[#0071e3] placeholder-[#86868b]"
+                />
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <svg className="h-5 w-5 text-[#86868b]" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                  </svg>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
+            {/* Filters Panel */}
+            <div className="lg:col-span-1">
+              <div className="bg-white rounded-2xl shadow-sm p-6">
+                <h2 className="font-medium text-lg text-[#1d1d1f] mb-6">Filters</h2>
+                
+                {/* Name Search - Add this section */}
+                <div className="mb-6">
+                  <h3 className="font-medium text-sm text-[#6e6e73] uppercase tracking-wider mb-3">Name Search</h3>
+                  <div className="mb-2">
+                    <input
+                      type="text"
+                      value={nameSearch}
+                      onChange={handleNameSearchChange}
+                      placeholder="Search by name..."
+                      className="w-full px-3 py-2 text-sm text-[#1d1d1f] border border-[#d2d2d7] rounded-lg focus:ring-1 focus:ring-[#0071e3] focus:border-[#0071e3]"
+                    />
+                  </div>
+                </div>
+                
+                {/* Filter Sections */}
+                <div className="space-y-8">
+                  {/* Major Filter */}
+                  <div>
+                    <h3 className="font-medium text-sm text-[#6e6e73] uppercase tracking-wider mb-3">Major</h3>
+                    <div className="mb-2">
+                      <input
+                        type="text"
+                        value={filterSearch.major}
+                        onChange={(e) => handleFilterSearchChange('major', e.target.value)}
+                        placeholder="Search majors..."
+                        className="w-full px-3 py-2 text-sm text-[#1d1d1f] border border-[#d2d2d7] rounded-lg focus:ring-1 focus:ring-[#0071e3] focus:border-[#0071e3]"
+                      />
+                    </div>
+                    <div className="space-y-2 max-h-48 overflow-y-auto pr-2 mt-2">
+                      {renderFilterItems(availableFilters.majors, 'major')}
+                    </div>
+                  </div>
+                  
+                  {/* Company Filter */}
+                  <div>
+                    <h3 className="font-medium text-sm text-[#6e6e73] uppercase tracking-wider mb-3">Company</h3>
+                    <div className="mb-2">
+                      <input
+                        type="text"
+                        value={filterSearch.company}
+                        onChange={(e) => handleFilterSearchChange('company', e.target.value)}
+                        placeholder="Search companies..."
+                        className="w-full px-3 py-2 text-sm text-[#1d1d1f] border border-[#d2d2d7] rounded-lg focus:ring-1 focus:ring-[#0071e3] focus:border-[#0071e3]"
+                      />
+                    </div>
+                    <div className="space-y-2 max-h-48 overflow-y-auto pr-2 mt-2">
+                      {renderFilterItems(availableFilters.companies, 'company')}
+                    </div>
+                  </div>
+                  
+                  {/* Graduation Year Filter */}
+                  <div>
+                    <h3 className="font-medium text-sm text-[#6e6e73] uppercase tracking-wider mb-3">Graduation Year</h3>
+                    <div className="mb-2">
+                      <input
+                        type="text"
+                        value={filterSearch.graduationYear}
+                        onChange={(e) => handleFilterSearchChange('graduationYear', e.target.value)}
+                        placeholder="Search years..."
+                        className="w-full px-3 py-2 text-sm text-[#1d1d1f] border border-[#d2d2d7] rounded-lg focus:ring-1 focus:ring-[#0071e3] focus:border-[#0071e3]"
+                      />
+                    </div>
+                    <div className="space-y-2 max-h-48 overflow-y-auto pr-2 mt-2">
+                      {renderFilterItems(availableFilters.graduationYears, 'graduationYear')}
+                    </div>
+                  </div>
+                  
+                  {/* Keyword Filter */}
+                  <div>
+                    <h3 className="font-medium text-sm text-[#6e6e73] uppercase tracking-wider mb-3">Skills</h3>
+                    <div className="mb-2">
+                      <input
+                        type="text"
+                        value={filterSearch.keyword}
+                        onChange={(e) => handleFilterSearchChange('keyword', e.target.value)}
+                        placeholder="Search skills..."
+                        className="w-full px-3 py-2 text-sm text-[#1d1d1f] border border-[#d2d2d7] rounded-lg focus:ring-1 focus:ring-[#0071e3] focus:border-[#0071e3]"
+                      />
+                    </div>
+                    <div className="space-y-2 max-h-48 overflow-y-auto pr-2 mt-2">
+                      {renderFilterItems(availableFilters.keywords, 'keyword')}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            {/* Resume Cards */}
+            <div className="lg:col-span-4">
+              {loading ? (
+                <div className="flex justify-center items-center h-64">
+                  <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#0071e3]"></div>
+                </div>
+              ) : error ? (
+                <div className="bg-red-50 border border-red-100 text-red-500 rounded-xl p-4 text-center">
+                  {error}
+                </div>
+              ) : filteredResumes.length === 0 ? (
+                <div className="text-center py-12 px-4 bg-white rounded-2xl shadow-sm">
+                  <svg className="mx-auto h-12 w-12 text-[#86868b]" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <h3 className="mt-4 text-lg font-medium text-[#1d1d1f]">No resumes found</h3>
+                  <p className="mt-1 text-[#6e6e73]">Try adjusting your filters</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {sortedResumes.map((resume) => (
+                    <ResumeCard 
+                      key={resume.id} 
+                      resume={resume} 
+                      isAdmin={user?.role === 'admin'}
+                      onDelete={handleResumeDelete}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       </div>
-    </div>
+    </ProtectedRoute>
   );
 }
