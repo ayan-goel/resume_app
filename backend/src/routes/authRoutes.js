@@ -1,14 +1,15 @@
 const express = require('express');
-const { register, login, getProfile } = require('../controllers/authController');
+const { adminLogin, getAdminProfile } = require('../controllers/authController');
 const { authenticate } = require('../middleware/auth');
 
 const router = express.Router();
 
-// Public routes
-router.post('/register', register);
-router.post('/login', login);
+// Admin routes
+router.post('/admin/login', adminLogin);
+router.get('/admin/profile', authenticate, getAdminProfile);
 
-// Protected routes
-router.get('/profile', authenticate, getProfile);
+// Legacy login endpoint for backwards compatibility (redirects to admin login)
+router.post('/login', adminLogin);
+router.get('/me', authenticate, getAdminProfile);
 
 module.exports = router; 

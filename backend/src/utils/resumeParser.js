@@ -51,6 +51,7 @@ const retryWithBackoff = async (fn, options = {}) => {
       }
 
       console.log(`Rate limit hit. Retrying in ${retryDelay / 1000}s... (Retry ${retries + 1}/${maxRetries})`);
+      console.log(`⏳ Please wait - AI service is processing. This may take up to ${Math.ceil(retryDelay / 1000)} seconds...`);
       await sleep(retryDelay);
       
       // Exponential backoff
@@ -226,7 +227,7 @@ const parseResumeWithGemini = async (text) => {
   try {
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({ 
-      model: "gemini-1.5-flash",
+      model: "gemini-2.0-flash-lite",
       generationConfig: {
         temperature: 0.1,  // Lower temperature for more deterministic output
         maxOutputTokens: 1024,
@@ -321,7 +322,7 @@ const parseResumeWithGemini = async (text) => {
           const result = await model.generateContent(prompt);
           return await result.response;
         },
-        { maxRetries: 5, initialDelay: 10000, maxDelay: 60000 }
+        { maxRetries: 3, initialDelay: 2000, maxDelay: 10000 }
       );
     } catch (apiError) {
       console.error('After retries, Gemini API still failed:', apiError);

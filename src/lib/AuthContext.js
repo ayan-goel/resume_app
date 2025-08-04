@@ -23,9 +23,8 @@ const AuthContext = createContext({
   user: null,
   isAuthenticated: false,
   isLoading: true,
-  login: async () => {},
+  adminLogin: async () => {},
   logout: () => {},
-  register: async () => {},
 });
 
 // Custom hook to access the auth context
@@ -36,7 +35,7 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Check if user is authenticated on initial load
+  // Check if admin is authenticated on initial load
   useEffect(() => {
     const checkAuth = async () => {
       const token = localStorage.getItem('token');
@@ -48,7 +47,7 @@ export function AuthProvider({ children }) {
       
       try {
         const { data } = await authAPI.getCurrentUser();
-        setUser(data.user);
+        setUser(data.data);
       } catch (error) {
         // Handle error (token invalid, expired, etc.)
         localStorage.removeItem('token');
@@ -61,57 +60,44 @@ export function AuthProvider({ children }) {
     checkAuth();
   }, []);
 
-  // Login function
-  const login = async (email, password) => {
+  // Simple admin login function
+  const adminLogin = async (password) => {
     try {
-      // The full axios response is { data: { error: false, message: '...', data: { id: ..., role: ..., token: ... } } }
-      const response = await authAPI.login(email, password);
-      const responseData = response.data; // Get the inner object { error: false, message: ..., data: ... }
-      const userData = responseData.data; // Get the user data object { id: ..., role: ..., token: ... }
+      const response = await authAPI.adminLogin(password);
+      const responseData = response.data;
+      const userData = responseData.data;
 
       if (responseData.error || !userData.token) {
-        throw new Error(responseData.message || 'Login failed: Invalid response from server');
+        throw new Error(responseData.message || 'Admin login failed: Invalid response from server');
       }
       
       // Store token in both localStorage and cookies
       localStorage.setItem('token', userData.token);
       setCookie('token', userData.token);
       
-      // Set user state with the actual user data object
+      // Set user state with admin data
       setUser(userData); 
       
-      // Return the user data object for the login page to use
       return userData; 
     } catch (error) {
-      // Log the error if it's not an axios error (which is already handled)
       if (!error.response) {
-        console.error("Login function error:", error);
+        console.error("Admin login function error:", error);
       }
-      throw error; // Re-throw for the component to handle
-    }
-  };
-
-  // Logout function
-  const logout = () => {
-    localStorage.removeItem('token');
-    removeCookie('token');
-    setUser(null);
-  };
-
-  // Register function
-  const register = async (userData) => {
-    try {
-      const { data } = await authAPI.register(userData);
-      
-      // Store token in both localStorage and cookies
-      localStorage.setItem('token', data.token);
-      setCookie('token', data.token);
-      
-      setUser(data.user);
-      return data;
-    } catch (error) {
       throw error;
     }
+  };
+
+  // Admin logout function
+  const logout = () => {
+    // Clear admin authentication cookie and token storage
+    removeCookie('token');
+    localStorage.removeItem('token');
+
+    // Reset admin context state
+    setUser(null);
+
+    // Also clear Supabase flag for good measure (does nothing if already gone)
+    localStorage.removeItem('supabaseAuth');
   };
 
   // Context value
@@ -119,9 +105,8 @@ export function AuthProvider({ children }) {
     user,
     isAuthenticated: !!user,
     isLoading,
-    login,
+    adminLogin,
     logout,
-    register,
   };
 
   return (

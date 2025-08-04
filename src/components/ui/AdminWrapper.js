@@ -16,7 +16,7 @@ export default function AdminWrapper({ children }) {
     );
   }
 
-  // If not authenticated or not an admin, redirect to login
+  // If not authenticated or not an admin, redirect to admin login
   if (!isAuthenticated || user?.role !== "admin") {
     router.push("/auth/login");
     return null;

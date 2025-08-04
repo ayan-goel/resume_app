@@ -13,13 +13,8 @@ export function middleware(request) {
   
   // Define paths that require admin authentication
   const adminRequiredPaths = [
-    '/admin',
+    '/admin/upload',
     '/profile',
-  ];
-  
-  // Define paths that require member authentication (Supabase)
-  const memberRequiredPaths = [
-    '/search',
   ];
   
   // Check if the path requires admin authentication
@@ -27,37 +22,30 @@ export function middleware(request) {
     pathname.startsWith(path)
   );
   
-  // Check if the path requires member authentication
-  const requiresMemberAuth = memberRequiredPaths.some(path => 
-    pathname.startsWith(path)
-  );
-  
   // Debugging
   console.log('Path:', pathname);
+  console.log('Admin Token:', adminToken ? 'Present' : 'Missing');
   console.log('Supabase Session:', hasSupabaseSession ? 'Present' : 'Missing');
   
-  // If the path requires admin auth and there's no token, redirect to admin login
+  // If the path requires admin auth and there's no admin token, redirect to admin login
   if (requiresAdminAuth && !adminToken) {
     const url = new URL('/auth/login', request.url);
     url.searchParams.set('from', pathname);
     return NextResponse.redirect(url);
   }
   
-  // Don't check memberRequiredPaths for now - this will be handled client-side
-  // We'll disable this server-side check until we figure out a reliable way to verify the session
-  
-  // If the path is admin login and the user is already logged in, redirect to home
-  if (pathname.startsWith('/auth/login') && adminToken) {
-    return NextResponse.redirect(new URL('/', request.url));
+  // If the path is admin login and the user is already logged in as admin, redirect to admin upload
+  if (pathname === '/auth/login' && adminToken) {
+    return NextResponse.redirect(new URL('/admin/upload', request.url));
   }
   
   return NextResponse.next();
 }
 
-// Configure which paths the middleware runs on - only protect admin routes for now
+// Configure which paths the middleware runs on - only protect specific admin routes
 export const config = {
   matcher: [
-    '/admin/:path*',
+    '/admin/upload/:path*',
     '/profile/:path*',
     '/auth/login',
   ],

@@ -1,6 +1,7 @@
 'use client';
 
 import { createContext, useContext, useState, useEffect } from 'react';
+import { useAuth } from './AuthContext';
 import { useRouter } from 'next/navigation';
 import { supabase } from './supabaseClient';
 
@@ -23,6 +24,9 @@ export function SupabaseAuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
+
+  // Access admin logout so we can clear admin state when a user signs out of Supabase
+  const { logout: adminLogout } = useAuth();
 
   // This effect runs once when the component mounts
   useEffect(() => {
@@ -185,14 +189,35 @@ export function SupabaseAuthProvider({ children }) {
   const signOut = async () => {
     try {
       setIsLoading(true);
-      await supabase.auth.signOut();
+
+      // Revoke the Supabase session on the server *and* remove the local copy
+      const { error } = await supabase.auth.signOut({ scope: 'global' });
+      if (error) {
+        throw error;
+      }
+
+      // Remove any custom flags we set
       localStorage.removeItem('supabaseAuth');
+
+      // Remove every key that starts with "supabase" to be 100% certain
+      Object.keys(localStorage).forEach((key) => {
+        if (key.toLowerCase().startsWith('supabase')) {
+          localStorage.removeItem(key);
+        }
+      });
+
+      // Also clear admin authentication tokens to prevent conflicts
+      document.cookie = 'token=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/';
+
+      // Inform the admin auth context that it should log out too (if user was admin)
+      if (adminLogout) {
+        adminLogout();
+      }
+
+      // Clear in-memory user and loading state
       setUser(null);
-      
-      // Force a hard refresh to clear auth state completely
-      window.location.href = '/';
     } catch (error) {
-      console.error("Error signing out:", error);
+      console.error('Error signing out:', error);
     } finally {
       setIsLoading(false);
     }

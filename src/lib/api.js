@@ -2,7 +2,7 @@ import axios from 'axios';
 
 // Create an axios instance with default config
 const api = axios.create({
-  baseURL: 'https://gtakpsi-resume-app-backend.org/api',
+  baseURL: process.env.NEXT_PUBLIC_BACKEND_URL,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -47,14 +47,18 @@ api.interceptors.response.use(
 
 // Auth-related API calls
 export const authAPI = {
+  adminLogin: (password) => 
+    api.post('/auth/login', { password }),
+  
+  getCurrentUser: () => 
+    api.get('/auth/me'),
+
+  // Legacy functions for backwards compatibility (kept in case used elsewhere)
   login: (email, password) => 
     api.post('/auth/login', { email, password }),
   
   register: (userData) => 
     api.post('/auth/register', userData),
-  
-  getCurrentUser: () => 
-    api.get('/auth/me'),
 };
 
 // Resume-related API calls

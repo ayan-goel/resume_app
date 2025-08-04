@@ -1,8 +1,7 @@
 const { verifyToken } = require('../utils/jwt');
-const { User } = require('../models');
 
-// Authenticate user based on JWT token
-const authenticate = async (req, res, next) => {
+// Authenticate admin based on simple JWT token
+const authenticateAdmin = async (req, res, next) => {
   try {
     // Get the token from the header
     const authHeader = req.headers.authorization;
@@ -20,19 +19,15 @@ const authenticate = async (req, res, next) => {
       return res.status(401).json({ error: true, message: 'Invalid token.' });
     }
     
-    // Find the user
-    const user = await User.findByPk(decoded.id);
-    if (!user || !user.isActive) {
-      return res.status(401).json({ error: true, message: 'User not found or inactive.' });
+    // Check if token is for admin
+    if (decoded.role !== 'admin') {
+      return res.status(403).json({ error: true, message: 'Access denied. Admin privileges required.' });
     }
     
-    // Attach the user object to the request
+    // Attach admin info to request
     req.user = {
-      id: user.id,
-      email: user.email,
-      role: user.role,
-      firstName: user.firstName,
-      lastName: user.lastName
+      id: 'admin',
+      role: 'admin'
     };
     
     next();
@@ -42,7 +37,12 @@ const authenticate = async (req, res, next) => {
   }
 };
 
-// Check if user has admin role
+// Legacy authenticate function for backwards compatibility (just calls authenticateAdmin)
+const authenticate = (req, res, next) => {
+  return authenticateAdmin(req, res, next);
+};
+
+// Check if user has admin role (simplified since we only have admin now)
 const isAdmin = (req, res, next) => {
   if (!req.user || req.user.role !== 'admin') {
     return res.status(403).json({ error: true, message: 'Access denied. Admin privileges required.' });
@@ -53,5 +53,6 @@ const isAdmin = (req, res, next) => {
 
 module.exports = {
   authenticate,
+  authenticateAdmin,
   isAdmin
 }; 

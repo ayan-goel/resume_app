@@ -26,12 +26,9 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false
     },
     uploadedBy: {
-      type: DataTypes.INTEGER,
+      type: DataTypes.STRING,
       allowNull: false,
-      references: {
-        model: 'Users',
-        key: 'id'
-      }
+      defaultValue: 'admin'
     },
     isActive: {
       type: DataTypes.BOOLEAN,
@@ -41,12 +38,6 @@ module.exports = (sequelize, DataTypes) => {
 
   // Associate the Resume model with other models
   Resume.associate = function(models) {
-    // A resume belongs to a user who uploaded it
-    Resume.belongsTo(models.User, {
-      foreignKey: 'uploadedBy',
-      as: 'uploader'
-    });
-
     // A resume can have many companies
     Resume.belongsToMany(models.Company, {
       through: 'ResumeCompanies',

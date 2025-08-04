@@ -46,8 +46,8 @@ export default function Header() {
   const handleSignOut = async () => {
     try {
       await signOut();
-      // Force a page refresh to clear auth state completely
-      window.location.href = '/';
+      // Navigate to the homepage without a full reload to avoid flicker
+      router.push('/');
     } catch (error) {
       console.error('Error signing out:', error);
     }
